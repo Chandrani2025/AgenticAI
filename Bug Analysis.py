@@ -107,7 +107,7 @@ async def main():
         await Console(team.run_stream(
             task="BugAnalyst: Analyze resolved bugs in IR project and populate shared_state['test_plan']. \n"
                  "1. Then design a stable user flow that can be used for sanity test \n"
-                 "2. Use REAL urls : 'https://www.saucedemo.com/' \n"
+                 "2. Use REAL urls : 'url to validate' \n"
 
                  "PlaywrightAgent: Execute test plan from shared_state['test_plan'] and update shared_state['execution_results']. \n"
 
