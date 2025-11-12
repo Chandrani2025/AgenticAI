@@ -10,12 +10,12 @@ from autogen_ext.tools.mcp import McpWorkbench, StdioServerParams
 from mcp import StdioServerParameters
 
 os.environ[
-    "OPENAI_API_KEY"] = "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"
+    "OPENAI_API_KEY"] = "OpenAIToken"
 os.environ[
-    "JIRA_API_TOKEN"] = "ATATT3xFfGF0XImdUm0qWZp5-sRJcARSOWNjvwhJDMIhaOpAiFzn04S303LgMgMYqr8BHMsxu2fnMeWs9d4wQ9tdJQxEfzYAAqk8q7xhw91jeIouNPZi1ElVkbLeN7FkhC-KkLm0RN6riR8LoqPCPYo8MPrlfz9PzEu52ekZTMiobhxOWIuHEZw=CF4CD73C"
-os.environ["JIRA_URL"] = "https://rushibharati22.atlassian.net/"
-os.environ["JIRA_USERNAME"] = "rushi.bharati22@gmail.com"
-os.environ["JIRA_PROJECTS_FILTER"] = "IR"
+    "JIRA_API_TOKEN"] = "JIRA Board Token"
+os.environ["JIRA_URL"] = "Jira board"
+os.environ["JIRA_USERNAME"] = "username"
+os.environ["JIRA_PROJECTS_FILTER"] = "board code"
 
 shared_state = {
     "test_plan": {},
@@ -99,7 +99,7 @@ async def main():
                                          "For each bug:\n"
                                          "- If Passed → mark status as CLOSED\n"
                                          "- If Fail → mark status as IN PROGRESS\n"
-                                         "After updating all bugs, confirm 'VALIDATION COMPLETE'."))
+                                         "After updating all bugs, confirm **'VALIDATION COMPLETE'.**"))
 
         team = RoundRobinGroupChat(participants=[bugAnalyst, automationanalyst, jiraanalyst],
                                    termination_condition=TextMentionTermination('VALIDATION COMPLETE'))
