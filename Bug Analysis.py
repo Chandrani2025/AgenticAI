@@ -18,8 +18,9 @@ os.environ["JIRA_USERNAME"] = "username"
 os.environ["JIRA_PROJECTS_FILTER"] = "board code"
 
 shared_state = {
-    "test_plan": {},
-    "execution_results": {}
+    "execution_results": {
+        "Bug_ID":"Result"
+    }
 }
 
 
@@ -54,52 +55,47 @@ async def main():
         bugAnalyst = AssistantAgent(name="BugAnalyst", model_client=client_model,
                                     workbench=jira_wb,
                                     system_message=("You are a Bug Analysis Agent.\n"
-                                                    "Your task is to query Jira for all issues in the 'Resolved' state, analyze their descriptions, "
-                                                    "and generate a Sanity Test Plan for each issue.\n"
-                                                    "Store the generated plan in shared_state['test_plan'] as JSON in the format:\n"
-                                                    "{'BUG_KEY': [{'step': <n>, 'action': <text>, 'expected_result': <text>}, ...]}\n"
+                                                    "Your task is to query Jira for all issues in the 'Resolved' state, read carefully the descriptions, "
+                                                    "and generate a Sanity Test Plan for each issue. Following all the steps are robust\n"
                                                     "After all test plans are created and stored, write exactly: **'HANDOFF TO AUTOMATION'**"
                                                     "to signal the PlaywrightAgent to begin automated testing.\n"
-                                                    "Do not hand off early — only after every bug's plan is complete and saved.\n"
-                                                    "Do not trigger JiraAnalyst call during Bug Analysis"))
+                                                    "Do not hand off early — only after every Sanity Test plan is complete and saved.\n"
+                                                    "Please a request complete Bug analysis slowly do not rush and do not trigger JiraAnalyst call during Bug Analysis\n"))
 
         automationanalyst = AssistantAgent(name="PlaywrightAgent", model_client=client_model, workbench=playwright_wb,
                                            system_message=("You are a Playwright Automation Agent.\n\n"
-                                                           "Execute each step of the Sanity Test Plan flow for every BUG_KEY provided.\n"
+                                                           "Execute each step of the Sanity Test Plan flow for every bug.\n"
                                                            "Convert the user flow from BugAnalyst into executable Playwright commands and run them reliably.\n\n"
-
-                                                           "💡 **Execution Guidelines:**\n"
-                                                           "- Before performing any action (click, type, validate), always wait for the target element using:\n"
-                                                           "  `page.wait_for_selector(<selector>, timeout=15000)` or a similar reliable locator.\n"
-                                                           "- For buttons or links, prefer role-based locators (e.g., `page.get_by_role('button', name='Login')`) over text or index-based locators.\n"
-                                                           "- Use `no_wait_after=True` if the click does not cause navigation.\n"
-                                                           "- Increase timeouts up to 15 seconds if the page or element is slow.\n"
-                                                           "- Capture screenshots after key steps (login, navigation, validation, error).\n"
-                                                           "- If a step times out, retry it once after waiting an additional 3 seconds before failing.\n\n"
-
                                                            "🧪 **Validation Rules:**\n"
-                                                           "- After each action, validate the expected result as defined in the Sanity Test Plan.\n"
+                                                           "- For each action, validate the expected result as defined in the Sanity Test Plan.\n"
                                                            "- Use `page.text_content()`, `page.locator().is_visible()`, or assertions to confirm outcomes.\n"
-                                                           "- Log 'Step Passed' or 'Step Failed' clearly, including the step number and element.\n"
                                                            "- Store a result summary for each BUG_KEY in shared_state['execution_results'] as:\n"
-                                                           "  `{'BUG_KEY': 'Passed' or 'Fail'}`\n\n"
+                                                           "Example: shared_state['execution_results'] = { 'BUG-123': 'Pass', 'BUG-124': 'Fail' }."
+                                                           "Take time to execute each of the steps of the test plan do not rush to complete"
+                                                           " Once all the steps are verified close the browser \n"
+                                                           "Please do not Handoff unless all the steps are executed.\n"
+                                                           "Retry if timeout error occurs.\n"
 
                                                            "🧭 **Completion Behavior:**\n"
                                                            "- When all steps for a bug’s Sanity Test Plan are executed and validated, write exactly:\n"
-                                                           "  **'HANDOFF TO JIRA'** to signal that automation is complete.\n"
+                                                           "  **'VERIFICATION COMPLETE'** to signal that automation is complete. and then Handoff to JIRA ANALYST\n"
                                                            "- Do not hand off until all steps are executed with proper waits and validations.\n"
                                                            "- Be patient: it is better to execute slowly and accurately than to rush and fail due to timeouts.\n"
+                                                           "Do not add any comment in JIRA bug unless the execution of all the steps are completed.\n"
+                                                            "Provide all the execution steps as logs"
 
                                                            ))
 
         jiraanalyst = AssistantAgent(name="JiraAnalyst", model_client=client_model,
                                      workbench=jira_wb,
                                      system_message=(
-                                         "You are a Jira expert. Read execution results from shared_state['execution_results'].\n"
+                                         "You are a Jira expert.Once the execution is completed then only you come into action. Read execution results from shared_state['execution_results'] for each of the bug.\n"
                                          "For each bug:\n"
-                                         "- If Passed → mark status as CLOSED\n"
-                                         "- If Fail → mark status as IN PROGRESS\n"
-                                         "After updating all bugs, confirm **'VALIDATION COMPLETE'.**"))
+                                         "- Only act if shared_state['execution_results'] exists and contains a valid result example Pass or Fail.\n"
+                                         "- If Bug_ID == 'Pass' → change the workflow of the BUG in JIRA IR board  to CLOSED.\n"
+                                         "- If Bug_ID == 'Fail' → change the workflow of the BUG in JIRA IR board to IN PROGRESS.\n"
+                                         "Never close or modify an issue unless PlaywrightAgent confirms a valid result like 'Pass' or 'Fail'.\n"
+                                         "After updating all valid bugs, confirm **'VALIDATION COMPLETE'** share the logs. \n"))
 
         team = RoundRobinGroupChat(participants=[bugAnalyst, automationanalyst, jiraanalyst],
                                    termination_condition=TextMentionTermination('VALIDATION COMPLETE'))
